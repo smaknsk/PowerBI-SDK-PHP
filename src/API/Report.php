@@ -13,7 +13,16 @@ class Report
 {
     const REPORT_URL = "https://api.powerbi.com/v1.0/myorg/reports";
     const GROUP_REPORT_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports";
+
+    const REPORT_EMBED_URL = "https://api.powerbi.com/v1.0/myorg/reports/%s/GenerateToken";
     const GROUP_REPORT_EMBED_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports/%s/GenerateToken";
+
+    const CLONE_URL = "https://api.powerbi.com/v1.0/myorg/reports/%s/Clone";
+    const GROUP_CLONE_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports/%s/Clone";
+
+    const REBIND_URL = "https://api.powerbi.com/v1.0/myorg/reports/%s/Rebind";
+    const GROUP_REBIND_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports/%s/Rebind";
+
 
     /**
      * The SDK client
@@ -41,7 +50,11 @@ class Report
      */
     public function getReports($groupId = null)
     {
-        $url = $this->getUrl($groupId);
+        $url = self::REPORT_URL;
+
+        if ($groupId) {
+            $url = sprintf(self::GROUP_REPORT_URL, $groupId);
+        }
 
         $response = $this->client->request(Client::METHOD_GET, $url);
 
@@ -57,9 +70,13 @@ class Report
      *
      * @return \Tngnt\PBI\Response
      */
-    public function getReportEmbedToken($reportId, $groupId, $accessLevel = 'view')
+    public function getReportEmbedToken($reportId, $groupId = null, $accessLevel = 'view')
     {
-        $url = sprintf(self::GROUP_REPORT_EMBED_URL, $groupId, $reportId);
+        if ($groupId) {
+            $url = sprintf(self::GROUP_REPORT_EMBED_URL, $groupId, $reportId);
+        } else {
+            $url = sprintf(self::REPORT_EMBED_URL, $reportId);
+        }
 
         $body = [
             'accessLevel' => $accessLevel,
@@ -71,18 +88,41 @@ class Report
     }
 
     /**
-     * Helper function to format the request URL
-     *
-     * @param null|string $groupId An optional group ID
-     *
-     * @return string
+     * @param $reportId
+     * @return \Tngnt\PBI\Response
      */
-    private function getUrl($groupId)
+    public function cloneReport($reportId, $groupId = null, $name = null, $targetModelId = null, $targetWorkspaceId = null)
     {
         if ($groupId) {
-            return sprintf(self::GROUP_REPORT_URL, $groupId);
+            $url = sprintf(self::GROUP_CLONE_URL, $groupId, $reportId);
+        } else {
+            $url = sprintf(self::CLONE_URL, $reportId);
         }
 
-        return self::REPORT_URL;
+        $body = [];
+        if ($name) $body['name'] = $name;
+        if ($targetModelId) $body['targetModelId'] = $targetModelId;
+        if ($targetWorkspaceId) $body['targetWorkspaceId'] = $targetWorkspaceId;
+
+        $response = $this->client->request(Client::METHOD_POST, $url, $body);
+
+        return $this->client->generateResponse($response);
+    }
+
+    public function rebindReport($reportId, $groupId = null, $datasetId)
+    {
+        if ($groupId) {
+            $url = sprintf(self::GROUP_REBIND_URL, $groupId, $reportId);
+        } else {
+            $url = sprintf(self::REBIND_URL, $reportId);
+        }
+
+        $body = [
+            'datasetId' => $datasetId
+        ];
+
+        $response = $this->client->request(Client::METHOD_POST, $url, $body);
+
+        return $this->client->generateResponse($response);
     }
 }

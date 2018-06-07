@@ -11,12 +11,12 @@ class Table
     /**
      * @var string
      */
-    private $name;
+    public $name;
 
     /**
      * @var array
      */
-    private $columns = [];
+    public $columns = [];
 
     /**
      * Table constructor.

@@ -17,12 +17,12 @@ class Column
     /**
      * @var string
      */
-    private $name;
+    public $name;
 
     /**
      * @var string
      */
-    private $dataType;
+    public $dataType;
 
     /**
      * Column constructor.

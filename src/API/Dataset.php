@@ -61,7 +61,7 @@ class Dataset
     {
         $url = $this->getUrl($groupId);
 
-        $response = $this->client->request(client::METHOD_POST, $url, $dataset);
+        $response = $this->client->request(client::METHOD_POST, $url, $dataset->toArray());
 
         return $this->client->generateResponse($response);
     }
