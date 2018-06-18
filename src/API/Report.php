@@ -3,7 +3,6 @@
 namespace Tngnt\PBI\API;
 
 use Tngnt\PBI\Client;
-
 /**
  * Class Report
  *
@@ -14,7 +13,6 @@ class Report
     const REPORT_URL = "https://api.powerbi.com/v1.0/myorg/reports";
     const GROUP_REPORT_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports";
 
-    const REPORT_EMBED_URL = "https://api.powerbi.com/v1.0/myorg/reports/%s/GenerateToken";
     const GROUP_REPORT_EMBED_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/reports/%s/GenerateToken";
 
     const CLONE_URL = "https://api.powerbi.com/v1.0/myorg/reports/%s/Clone";
@@ -70,13 +68,9 @@ class Report
      *
      * @return \Tngnt\PBI\Response
      */
-    public function getReportEmbedToken($reportId, $groupId = null, $accessLevel = 'view')
+    public function getReportEmbedToken($reportId, $groupId, $accessLevel = 'view')
     {
-        if ($groupId) {
-            $url = sprintf(self::GROUP_REPORT_EMBED_URL, $groupId, $reportId);
-        } else {
-            $url = sprintf(self::REPORT_EMBED_URL, $reportId);
-        }
+        $url = sprintf(self::GROUP_REPORT_EMBED_URL, $groupId, $reportId);
 
         $body = [
             'accessLevel' => $accessLevel,
