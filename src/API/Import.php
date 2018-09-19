@@ -13,9 +13,11 @@ use Tngnt\PBI\Model\Import as ImportModel;
 class Import
 {
     const IMPORT_URL = "https://api.powerbi.com/v1.0/myorg/imports";
+    const GROUP_IMPORT_URL = 'https://api.powerbi.com/v1.0/myorg/groups/%s/imports';
     const CONFLICT_IGNORE = 'Ignore';
     const CONFLICT_ABORT = 'Abort';
     const CONFLICT_OVERWRITE = 'Overwrite';
+    const CONFLICT_CREATEOROVERWRITE = 'CreateOrOverwrite';
 
     /**
      * The SDK client
@@ -37,47 +39,46 @@ class Import
     /**
      * Creates an import on PowerBI
      *
-     * @param ImportModel $import              The import to create
-     * @param string      $datasetDisplayName  A custom display name. Blank to ignore.
-     * @param string      $nameConflict        What to do when there is a name conflict. Either "Ignore", "Abort", or
-     *                                         "Overwrite"
-     * @param string      $preferClientRouting Avoid request redirecting between clusters and timeouts.
+     * @param ImportModel $import         The import to create
+     * @param string $groupId             The group Id to create
+     * @param string $datasetDisplayName  A custom display name. Blank to ignore.
+     * @param string $nameConflict        What to do when there is a name conflict. Either "Ignore", "Abort", "Overwrite" or "CreateOrOverwrite"
      *
      * @return \Tngnt\PBI\Response
      */
-    public function createImport(
-        ImportModel $import,
-        $datasetDisplayName = '',
-        $nameConflict = 'Ignore',
-        $preferClientRouting = 'false'
-    )
+    public function createImport(ImportModel $import, $groupId = null, $datasetDisplayName, $nameConflict = self::CONFLICT_CREATEOROVERWRITE)
     {
-        // Validate the nameConflict parameter
-        if (
-            $nameConflict != self::CONFLICT_ABORT &&
-            $nameConflict != self::CONFLICT_IGNORE &&
-            $nameConflict != self::CONFLICT_OVERWRITE) {
-            throw new \InvalidArgumentException(
-                'The nameConflict parameter should either be "Ignore", "Abort", or "Overwrite"'
-            );
+        $url = $this->getUrl($groupId);
+
+        $boundary = "----------BOUNDARY";
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url . '?nameConflict='.$nameConflict.'&datasetDisplayName=' . $datasetDisplayName);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $postdata = '';
+        $postdata .= "--" . $boundary . "\r\n";
+        $postdata .= "Content-Disposition: form-data\r\n";
+        $postdata .= "Content-Type: application/octet-stream\r\n\r\n";
+        $postdata .= file_get_contents($import->getFilePath());
+        $postdata .= "\r\n";
+        $postdata .= "--" . $boundary . "--\r\n";
+
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Authorization: Bearer " . $this->client->token,
+            'Content-Type: multipart/form-data; boundary=' . $boundary,
+            'Content-Length: ' . strlen($postdata)
+        ));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        if (curl_error($ch)) {
+            return 'curl error';
         }
+        curl_close($ch);
 
-        // Validate the preferClientRouting parameter
-        if ($preferClientRouting !== 'false' && $preferClientRouting !== 'true') {
-            throw new \InvalidArgumentException(
-                'The preferClientRouting parameter should be a string with a boolean value'
-            );
-        }
+        return json_decode($response, true);
 
-        // Generate the URL
-        $url = self::IMPORT_URL . "?nameConflict=$nameConflict&PreferClientRouting=$preferClientRouting";
-        if ($datasetDisplayName !== '') {
-            $url .= "&datasetDisplayName=$datasetDisplayName";
-        }
-
-        $response = $this->client->request(Client::METHOD_POST, $url, $import);
-
-        return $this->client->generateResponse($response);
     }
 
     /**
@@ -85,9 +86,11 @@ class Import
      *
      * @return \Tngnt\PBI\Response
      */
-    public function getImports()
+    public function getImports($groupId = null)
     {
-        $response = $this->client->request(Client::METHOD_GET, self::IMPORT_URL);
+        $url = $this->getUrl($groupId);
+
+        $response = $this->client->request(Client::METHOD_GET, $url);
 
         return $this->client->generateResponse($response);
     }
@@ -99,12 +102,28 @@ class Import
      *
      * @return \Tngnt\PBI\Response
      */
-    public function getImport($importId)
+    public function getImport($importId, $groupId = null)
     {
-        $url = self::IMPORT_URL . "/$importId";
+        $url = $this->getUrl($groupId) . '/' . $importId;
 
         $response = $this->client->request(Client::METHOD_GET, $url);
 
         return $this->client->generateResponse($response);
+    }
+
+    /**
+     * Helper function to format the request URL
+     *
+     * @param null|string $groupId An optional group ID
+     *
+     * @return string
+     */
+    private function getUrl($groupId)
+    {
+        if ($groupId) {
+            return sprintf(self::GROUP_IMPORT_URL, $groupId);
+        }
+
+        return self::IMPORT_URL;
     }
 }

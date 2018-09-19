@@ -13,7 +13,8 @@ class Datasource
 {
     const DATASOURCE_URL = "https://api.powerbi.com/v1.0/myorg/datasets/%s/dataSources";
     const GATEWAY_DATASOURCE_URL = "https://api.powerbi.com/v1.0/myorg/datasets/%s/Default.GetBoundGatewayDataSources";
-    const CONNECTION_DATASOURCE_URL = "https://api.powerbi.com/v1.0/myorg/myorg/datasets/%s/Default.SetAllConnections";
+    const CONNECTION_DATASOURCE_URL = "https://api.powerbi.com/v1.0/myorg/datasets/%s/Default.SetAllConnections";
+    const GROUP_CONNECTION_DATASOURCE_URL = "https://api.powerbi.com/v1.0/myorg/groups/%s/datasets/%s/Default.SetAllConnections";
 
     /**
      * The SDK client
@@ -72,9 +73,9 @@ class Datasource
      *
      * @return \Tngnt\PBI\Response
      */
-    public function setAllConnections($datasetId, $connectionString)
+    public function setAllConnections($groupId, $datasetId, $connectionString)
     {
-        $url = sprintf(self::CONNECTION_DATASOURCE_URL, $datasetId);
+        $url = sprintf(self::GROUP_CONNECTION_DATASOURCE_URL, $groupId, $datasetId);
 
         $response = $this->client->request(
             Client::METHOD_POST,
